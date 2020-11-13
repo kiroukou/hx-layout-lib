@@ -1,0 +1,30 @@
+
+<canvas id="layout" width="100%" height="100%" align="left, top">
+	<vbox id="boxMenu" width="50%" height="50%" align="center, middle" childAlign="right,bottom" paddingTop="10" paddingBottom="10" paddingLeft="0" paddingRight="0">
+		<element id="image" width="50%" height="50%" paddingTop="10" paddingBottom="10" paddingLeft="10" paddingRight="10">
+			<Script>
+			<![CDATA[
+				function onInit() 
+				{
+					trace('coucou component '+this.name);
+				}
+
+				function onResize()
+				{
+					trace("hey, je suis resize ! "+this.name);
+				}
+			]]>
+			</Script>
+	
+			<Style>
+			<![CDATA[
+				{
+					"backgroundColor": "0xFF",
+					"outlineThickness": 2,
+					"outlineColor": "0xFF00FF"
+				}
+			]]>
+			</Style>
+		</element>
+	</vbox>
+</canvas>

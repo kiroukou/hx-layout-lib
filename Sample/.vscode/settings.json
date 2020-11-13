@@ -1,0 +1,34 @@
+{
+    "haxe.executable": {
+        "windows": {
+            "path": ".haxe\\haxe.exe",
+            // environment variables for Haxe
+            "env": { 
+                "HAXE_STD_PATH": ".haxe\\std"
+            }
+        },
+        "linux": {
+            "path": ".haxe/haxe",
+            // environment variables for Haxe
+            "env": { 
+                "HAXE_STD_PATH": ".haxe/std"
+            }
+        },
+        "osx": {
+            "path": ".haxe/haxe",
+            // environment variables for Haxe
+            "env": { 
+                "HAXE_STD_PATH": ".haxe/std"
+            }
+        }
+    },
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/.DS_Store": true,
+        "**/hlout": true,
+        "**/.unittest": true,
+        "bin/build/Release": true
+    }
+}

@@ -1,0 +1,14 @@
+-cp src
+-cp ../lib
+#-D analyzer-optimize
+#--interp
+-main Main
+
+-L heaps:1.7.0
+-L hx3compat:1.0.3
+-L hscript:2.4.0
+-dce full
+
+-L hashlink
+-L hlsdl:1.10.0 
+-hl bin/main.hl
