@@ -4,9 +4,14 @@ import ee.ui.layout.Element;
 
 interface IElementContainer
 {
-	function addElement (child:Element, ?p_silent:Bool) : Element; 
+	var onUpdate : Void->Void;
+	var onDisabled : Void->Void;
+
+//	function eval():Void;
 	
-	function addElementAt (child:Element, p_index:Int, ?p_silent:Bool) : Element; 
+	function addElement (child:Element) : Element; 
+	
+	function addElementAt (child:Element, p_index:Int) : Element; 
 	
 	function getElementByName( pName:String ):Null<Element>;
 	
@@ -14,25 +19,31 @@ interface IElementContainer
 	
 	function getElementIndex(p_element:Element):Int;
 	
+	function invalidate():Void;
+	
 	function getElementAt(p_index:Int):Null<Element>;
 	
 	function removeAll():Void;
 	
-	function removeElement(child:Element, ?p_silent:Bool):Bool;
+	function removeElement(child:Element):Bool;
 	
-	function refresh(?p_silent:Bool):Void;
+	function refresh():Void;
 	
-	function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float>, ?p_silent:Bool = false ):Void;
+	function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float> ):Void;
 	
 	function clean():Void;
 	
+	function notify():Void;
+
 	var numElements(get, null):Int;
 	
+	var name:String;
+	var root(default, null):Null<IElementContainer>;
 	var hLayout:HLayoutKind;
 	var vLayout:VLayoutKind;
 	
-	var hChildrenLayout:HLayoutKind;
-	var vChildrenLayout:VLayoutKind;
+	var hChildrenLayout(default, set):HLayoutKind;
+	var vChildrenLayout(default, set):VLayoutKind;
 	
 	var globalX(get, null):Float;
 	var globalY(get, null):Float;

@@ -3,23 +3,60 @@ package ee.ui.layout;
 import ee.ui.layout.Element;
 import ee.Metrics;
 
+
 /**
 * Children of this box are aligned relative to box bounds
 */
 class BoxLayout extends Element implements IElementContainer
 {	
     //Should we arrange children vertically (true) or horizontally (false). True by default.
-    public var vertical : Bool = true;
+    public var vertical(default, set) : Bool = true;
+	inline function set_vertical(pVal:Bool):Bool {
+		if ( pVal != vertical ) {
+			invalidate();
+			vertical = pVal;
+		}
+		return vertical;
+	}
+	
 	//Distance between children
 	// "wide"  "auto"  "%"  "px"  "dp" are valid values
-    public var childPadding : String;
-    //if this is set to true, all children will be set to equal size to fit box size
-    public var autoSize : Bool = false;
+    public var childPadding(default, set) : String;
+	inline function set_childPadding(pVal) {
+		if ( pVal != childPadding ) {
+			invalidate();
+			childPadding = pVal;
+		}
+		return childPadding;
+	}
 	
-	//valeur du padding en Flotant, READ-ONLY
-	public var childPaddingPx(default, null):Float;
-	public var hChildrenLayout:HLayoutKind;
-	public var vChildrenLayout:VLayoutKind;
+    //if this is set to true, all children will be set to equal size to fit box size
+    public var autoSize(default, set) : Bool = false;
+	inline function set_autoSize(pVal:Bool):Bool {
+		if ( pVal != autoSize ) {
+			invalidate();
+			autoSize = pVal;
+		}
+		return autoSize;
+	}
+	
+	public var hChildrenLayout(default, set):HLayoutKind;
+	inline function set_hChildrenLayout(pVal) {
+		if ( pVal != hChildrenLayout ) {
+			invalidate();
+			hChildrenLayout = pVal;
+		}
+		return hChildrenLayout;
+	}
+	
+	public var vChildrenLayout(default, set):VLayoutKind;
+	inline function set_vChildrenLayout(pVal) {
+		if ( pVal != vChildrenLayout ) {
+			invalidate();
+			vChildrenLayout = pVal;
+		}
+		return vChildrenLayout;
+	}
 	
 	public var numElements(get, null):Int;
 	inline function get_numElements():Int
@@ -27,6 +64,8 @@ class BoxLayout extends Element implements IElementContainer
 		return mElements.length;
 	}
 	
+	//valeur du padding en Flotant, READ-ONLY
+	var childPaddingPx(default, null):Float;
 	var mElements:Array<Element>;
 	
 	public function new(pWidth:String, pHeight:String, ?pHorizontalLayout:HLayoutKind=null, ?pVerticalLayout:VLayoutKind=null, ?pAspect:AspectKind=null)
@@ -43,7 +82,7 @@ class BoxLayout extends Element implements IElementContainer
 		var e = new BoxLayout("1", "1");
 		e.name = this.name;
 		e.parent = this.parent;
-		e.config = { paddingLeft:config.paddingLeft, paddingRight:config.paddingRight, paddingTop:config.paddingTop, paddingBottom:config.paddingBottom, width:config.width, height:config.height };
+		e.style = Reflect.copy(style);
 		e.vLayout = this.vLayout;
 		e.hLayout = this.hLayout;
 		e.aspect = this.aspect;
@@ -89,46 +128,44 @@ class BoxLayout extends Element implements IElementContainer
 		return el;
 	}
 	
-	public function addElement (child:Element, ?p_silent:Bool) : Element 
+	public function addElement (child:Element) : Element 
 	{
-		return addElementAt(child, mElements.length, p_silent);
+		return addElementAt(child, mElements.length);
 	}
 	
-	public function addElementAt (child:Element, p_index:Int, ?p_silent:Bool) : Element
+	public function addElementAt (child:Element, p_index:Int) : Element
 	{
 		mElements[p_index] = child;
 		child.parent = this;
 		if( !child.disabled )
-			refresh(p_silent);
-		refresh(p_silent);
+			invalidate();
 		return child;
 	}
 	
-	public function removeElement(child:Element, ?p_silent:Bool):Bool
+	public function removeElement(child:Element):Bool
 	{
 		if( mElements.remove(child) )
 		{
 			if( !child.disabled )
-				refresh(p_silent);
+				invalidate();
 			return true;
 		} else {
 			return false;
 		}
 	}
 	
-	public function removeElementAt(childIndex:Int, ?p_silent:Bool):Bool
+	public function removeElementAt(childIndex:Int):Bool
 	{
 		var child = getElementAt(childIndex);
 		if( mElements.remove(child) )
 		{
 			if( !child.disabled )
-				refresh(p_silent);
+				invalidate();
 			return true;
 		} else {
 			return false;
 		}
 	}
-	
 	
 	public function removeAll()
 	{
@@ -152,29 +189,18 @@ class BoxLayout extends Element implements IElementContainer
 		super.clean();
 	}
 	
-	override public function notify()
+	override public function refresh() : Void 
 	{
-		super.notify();
-		for ( e in mElements ) 
-			if( !e.disabled )
-				e.notify();
-	}
-	
-	override public function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float>, ?p_silent:Bool=false )
-	{
-		if ( disabled ) return;
-		updateSize( pWidth, pHeight, pForceWidth, pForceHeight );
-		updatePosition( pWidth, pHeight );
-		//
-		refresh(p_silent);
-	}
-	
-	public function refresh(?p_silent:Bool=false) : Void 
-	{
-		this.resizeElements();
-		this.alignElements();
-		if( !p_silent )
-			notify();
+		if ( invalidated )
+		{
+			this.resizeElements();
+			this.alignElements();
+		}
+		
+		for ( e in mElements )
+			e.refresh();
+		
+		super.refresh();
 	}
 	
 	function resizeElements()
@@ -189,25 +215,25 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if( e.disabled ) continue;
-				if( vertical && px(e.config.height) >= 0 || !vertical && px(e.config.width) >= 0 )
+				if( vertical && px(e.style.height) >= 0 || !vertical && px(e.style.width) >= 0 )
 				{
-					e.resize( contentWidth, contentHeight, true );
+					e.resize( contentWidth, contentHeight );
 					if( vertical ) 	usedSpace += e.bounds.height;
 					else 			usedSpace += e.bounds.width;
 				}
 				else
 				{
 					postProcess.add(e);
-					if( vertical ) totalParts -= px(e.config.height);
-					else 		   totalParts -= px(e.config.width);
+					if( vertical ) totalParts -= px(e.style.height);
+					else 		   totalParts -= px(e.style.width);
 				}
 			}
 			
 			var freeSpace = vertical ? contentHeight - usedSpace : contentWidth - usedSpace;
 			for( e in postProcess )
 			{
-				if( vertical )	e.resize( contentWidth, contentHeight, null, -px(e.config.height)/totalParts * freeSpace, true );
-				else 			e.resize( contentWidth, contentHeight, -px(e.config.width)/totalParts * freeSpace, null, true );
+				if( vertical )	e.resize( contentWidth, contentHeight, null, -px(e.style.height)/totalParts * freeSpace );
+				else 			e.resize( contentWidth, contentHeight, -px(e.style.width)/totalParts * freeSpace, null );
 			}
 		}
 		
@@ -276,7 +302,7 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if( e.disabled ) continue;
-				e.resize(contentWidth, contentHeight, childWidth, childHeight, true);
+				e.resize(contentWidth, contentHeight, childWidth, childHeight);
 			}
 		}
 		else
@@ -290,23 +316,29 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if( e.disabled ) continue;
-				e.resize(contentWidth, contentHeight, childWidth, childHeight, true);
+				e.resize(contentWidth, contentHeight, childWidth, childHeight);
 			}
 		}
 	}
 	
 	function _vAlignTop () : Void 
 	{
-		var base = 0.0;// this.paddingTop;
+		var base = 0.0;// this.marginTop;
 		if( this.vertical )
 		{
 			var lastY = base;
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.vLayout != INHERITED ) continue;
-				_setObjY(e, lastY);
-				lastY += e.bounds.height + childPaddingPx;
+				if ( e.vLayout != INHERITED )
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjY(e, lastY);
+					lastY += e.bounds.height + childPaddingPx;
+				}
 			}
 		}
 		else
@@ -314,8 +346,14 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.vLayout != INHERITED ) continue;
-				_setObjY(e, base);
+				if ( e.vLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjY(e, base);
+				}
 			}
 		}
 	}
@@ -334,17 +372,23 @@ class BoxLayout extends Element implements IElementContainer
 				h += e.bounds.height;
 				nb ++;
 			}
-			//childPaddingPx = px(childPadding, this.contentHeight);
 			//add padding
 			h += (nb - 1) * childPaddingPx;
 			//arrange elements
-			var lastY = (this.contentHeight - h) / 2 + this.contentY;
+			var lastY = .5 * (this.contentHeight - h);
+
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.vLayout != INHERITED ) continue;
-				_setObjY(e, lastY);
-				lastY += e.bounds.height + childPaddingPx;
+				if ( e.vLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjY(e, lastY);
+					lastY += e.bounds.height + childPaddingPx;
+				}
 			}
 		}
 		else
@@ -352,24 +396,36 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.vLayout != INHERITED ) continue;
-				_setObjY(e, (this.contentHeight - e.bounds.height) / 2);
+				if ( e.vLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjY(e, (this.contentHeight - e.bounds.height) / 2);
+				}
 			}
 		}
 	}
 
 	function _vAlignBottom() : Void 
 	{
-		var lastY = bounds.height - paddingBottom;
+		var lastY = height;// - marginBottom;
 		if( this.vertical )
 		{
 			//childPaddingPx = px(childPadding, contentHeight);
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.vLayout != INHERITED ) continue;
-				_setObjY(e, lastY - e.bounds.height);
-				lastY = e.contentY - childPaddingPx;
+				if ( e.vLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjY(e, lastY - e.bounds.height);
+					lastY = e.contentY - childPaddingPx;
+				}
 			}
 		}
 		else
@@ -377,23 +433,35 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.vLayout != INHERITED ) continue;
-				_setObjY(e, lastY - e.bounds.height);
+				if ( e.vLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjY(e, lastY - e.bounds.height);
+				}
 			}
 		}
 	}
 	
 	function _hAlignLeft() : Void 
 	{
-		var base = 0.0;// this.paddingLeft;
+		var base = 0.0;// this.marginLeft;
 		//vertical box
 		if( this.vertical )
 		{
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.hLayout != INHERITED ) continue;
-				_setObjX(e, base);
+				if ( e.hLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjX(e, base);
+				}
 			}
 		}
 		else
@@ -403,24 +471,36 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.hLayout != INHERITED ) continue;
-				_setObjX(e, lastX);
-				lastX += e.bounds.width + childPaddingPx;
+				if ( e.hLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjX(e, lastX);
+					lastX += e.bounds.width + childPaddingPx;
+				}
 			}
 		}
 	}
 
 	function _hAlignRight() : Void
 	{
-		var base = this.bounds.width - this.paddingRight;
+		var base = this.width;
 		//vertical box
 		if( this.vertical )
 		{	
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.hLayout != INHERITED ) continue;
-				_setObjX(e, base - e.bounds.width);
+				if ( e.hLayout != INHERITED )
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjX(e, base - e.bounds.width);
+				}
 			}
 		}
 		else
@@ -430,9 +510,15 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.hLayout != INHERITED ) continue;
-				_setObjX(e, lastX - e.bounds.width);
-				lastX = e.contentX - childPaddingPx;
+				if ( e.hLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjX(e, lastX - e.bounds.width);
+					lastX = e.contentX - childPaddingPx;
+				}
 			}
 		}
 	}
@@ -445,8 +531,14 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.hLayout != INHERITED ) continue;
-				_setObjX(e, 0 + (this.contentWidth - e.bounds.width) / 2);
+				if ( e.hLayout != INHERITED ) 
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjX(e, 0 + (this.contentWidth - e.bounds.width) / 2);
+				}
 			}
 		}
 		else
@@ -472,20 +564,26 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if ( e.disabled ) continue;
-				if ( e.hLayout != INHERITED ) continue;
-				_setObjX(e, lastX);
-				lastX += e.bounds.width + childPaddingPx;
+				if ( e.hLayout != INHERITED )
+				{
+					e.updatePosition(contentWidth, contentHeight);
+				}
+				else
+				{
+					_setObjX(e, lastX);
+					lastX += e.bounds.width + childPaddingPx;
+				}
 			}
 		}
 	}
 	
 	inline function _setObjX (e:Element, p_x:Float) : Void 
 	{
-		e.contentX = p_x + e.paddingLeft;
+		e.contentX = p_x + e.marginLeft;
 	}
 	
 	inline function _setObjY (e:Element, p_y:Float) : Void 
 	{
-		e.contentY = p_y + e.paddingTop;
+		e.contentY = p_y + e.marginTop;
 	}
 }

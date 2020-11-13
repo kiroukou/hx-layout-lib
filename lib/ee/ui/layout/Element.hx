@@ -1,20 +1,19 @@
 package ee.ui.layout;
 
-import haxe.ds.List;
 import ee.Metrics.Px;
 
 /**
  * Configuration of the element
  */
-typedef ElementConfig = {
+typedef ElementStyle = {
 
 	var width:String;
 	var height:String;
 	
-	var paddingLeft:String;
-	var paddingRight:String;
-	var paddingTop:String;
-	var paddingBottom:String;
+	var marginLeft:String;
+	var marginRight:String;
+	var marginTop:String;
+	var marginBottom:String;
 	
 	@:optional var minWidth:Null<String>;
 	@:optional var minHeight:Null<String>;
@@ -56,24 +55,34 @@ typedef Bounds = {
 	height:Float,
 }
 
+typedef ScriptInfo = {
+	?interp:hscript.Interp,
+	?content:String,
+	eval:Void->Any
+}
+
 class Element
 {
-	public var onUpdate:List<Element->Void>;
-	public var onDisabled:List<Element->Void>;
-
+	public var onUpdate:Void->Void;
+	public var onDisabled:Void->Void;
+	
+	public var onUpdateScript:Void->Void;
+	public var onDisabledScript:Void->Void;
+	
 	public var name:String;
-	public var config:ElementConfig;
-	public var script:Null<String>;
-	public var style:Null<String>;
-
+	public var style(default, set):ElementStyle;
 	public var hLayout:HLayoutKind;
 	public var vLayout:VLayoutKind;
 	public var aspect:AspectKind;
 	
-	public var paddingLeft(default, null):Float;
-	public var paddingRight(default, null):Float;
-	public var paddingTop(default, null):Float;
-	public var paddingBottom(default, null):Float;
+	public var invalidated(default, null):Bool;
+	public var script:ScriptInfo;
+	public var viewStyle:Dynamic;
+	
+	public var marginLeft(default, null):Float;
+	public var marginRight(default, null):Float;
+	public var marginTop(default, null):Float;
+	public var marginBottom(default, null):Float;
 	
 	public var x(default, null):Float;
 	public var y(default, null):Float;
@@ -89,16 +98,30 @@ class Element
 	inline function set_disabled(value:Bool):Bool {
 		if( value != disabled ) {
 			disabled = value;
-			for( f in onDisabled) f(this);
+			if ( parent != null ) 
+				parent.invalidate();
+			
+			if ( onDisabled != null ) onDisabled();
+			if ( onDisabledScript != null ) onDisabledScript();
 		}
 		return disabled;
+	}
+	
+	inline public function disable()
+	{
+		disabled = true;
+	}
+	
+	inline public function enable()
+	{
+		disabled = false;
 	}
 	
 	var contentX(get, set):Float;
 	function get_contentX():Float { return x; }
 	function set_contentX(v:Float) {
 		x = v;
-		bounds.x = v - paddingLeft; 
+		bounds.x = v - marginLeft; 
 		return v; 
 	};
 	
@@ -106,7 +129,7 @@ class Element
 	function get_contentY():Float { return y; }
 	function set_contentY(v:Float) { 
 		y = v;
-		bounds.y = v - paddingTop; 
+		bounds.y = v - marginTop; 
 		return v; 
 	};
 	
@@ -114,7 +137,7 @@ class Element
 	function get_contentWidth():Float { return width; }
 	function set_contentWidth(v:Float) {
 		width = v;
-		bounds.width = v + paddingLeft + paddingRight; 
+		bounds.width = v + marginLeft + marginRight; 
 		return v; 
 	};
 	
@@ -122,10 +145,9 @@ class Element
 	function get_contentHeight():Float { return height; }
 	function set_contentHeight(v:Float) {
 		height = v;
-		bounds.height = v + paddingTop + paddingBottom;
+		bounds.height = v + marginTop + marginBottom;
 		return v;
 	};
-	
 	
 	public function relativeX( p_ref:Element ):Float
 	{
@@ -153,7 +175,15 @@ class Element
 		return ly;
 	}
 	
-	public var parent(default, null):Null<IElementContainer>;
+	public var parent(default, set):Null<IElementContainer>;
+	inline function set_parent(pParent:Null<IElementContainer>):Null<IElementContainer>
+	{
+		if ( pParent != null ) root = pParent.root;
+		else root = null;		
+		return parent = pParent;
+	}
+	
+	public var root(default, null):Null<IElementContainer>;
 	
 	inline function get_globalX() {
 		var v = x;
@@ -185,33 +215,59 @@ class Element
 					else { var tmp : Px = v; tmp; }
 	}
 	
+	public function invalidate()
+	{
+		invalidated = true;
+	}
+	
 	public function new( pWidth:String, pHeight:String, ?pHorizontalLayout:HLayoutKind=null, ?pVerticalLayout:VLayoutKind=null, ?pAspect:AspectKind=null ) 
 	{
 		this.hLayout = pHorizontalLayout == null ? HLayoutKind.INHERITED : pHorizontalLayout;
 		this.vLayout = pVerticalLayout == null ? VLayoutKind.INHERITED : pVerticalLayout;
 		this.aspect = pAspect == null ? AspectKind.MATCH_PARENT : pAspect;
 		this.bounds = { x:0, y:0, width:0, height:0 };
-		this.paddingTop = this.paddingRight = this.paddingLeft = this.paddingBottom = 0;
+		this.marginTop = this.marginRight = this.marginLeft = this.marginBottom = 0;
 		this.contentHeight = this.contentWidth = 0;
 		this.contentX = this.contentY = 0;
 		this.disabled = false;
+		this.invalidated = true;
+		this.script = { eval:() -> null };
 		parent = null;
-		config = { paddingLeft:"0", paddingRight:"0", paddingTop:"0", paddingBottom:"0", width:StringTools.trim(pWidth), height:StringTools.trim(pHeight) };
-
-		onDisabled = new List();
-		onUpdate = new List();
+		style = { marginLeft:"0", marginRight:"0", marginTop:"0", marginBottom:"0", width:StringTools.trim(pWidth), height:StringTools.trim(pHeight) };
+	}
+	
+	function set_style(pStyle:ElementStyle)
+	{
+		for ( f in Reflect.fields(pStyle) )
+		{
+			if ( Reflect.field(style, f) != Reflect.field(pStyle, f) )
+			{
+				invalidate();
+				break;
+			}
+		}
+		return this.style = pStyle;
+	}
+	
+	public function refresh() : Void 
+	{
+		var wasInvalidated = invalidated;
+		invalidated = false;
+		if ( wasInvalidated )
+		{
+			notify();
+		}
 	}
 	
 	public function clone():Element
 	{
 		var e = new Element("1", "1");
 		e.name = this.name;
-		e.config = { paddingLeft:config.paddingLeft, paddingRight:config.paddingRight, paddingTop:config.paddingTop, paddingBottom:config.paddingBottom, width:config.width, height:config.height };
+		e.style = Reflect.copy(style);
 		e.vLayout = this.vLayout;
 		e.hLayout = this.hLayout;
 		e.aspect = this.aspect;
 		e.disabled = this.disabled;
-		e.parent = this.parent;
 		return e;
 	}
 	
@@ -222,30 +278,39 @@ class Element
 	
 	public function clean()
 	{
-		onUpdate = new List();
-		onDisabled = new List();
+		onUpdate = null;
+		onDisabled = null;
 	}
 	
 	public function notify()
 	{
-		for(f in onUpdate) f(this);
+		if ( onUpdate != null ) onUpdate();
+		if ( onUpdateScript != null ) onUpdateScript();
+		//if( onDisabled != null ) onDisabled();
 	}
+
+
+	function callScript(fnName:String) {
+        if( script.interp == null ) return;
+        var cb = script.interp.variables.get(fnName);
+		if( cb != null ) 
+			cb();
+    }
 	
-	public function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float>, ?p_silent:Bool=false )
+	public function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float>)
 	{
-		updateSize( pWidth, pHeight, pForceWidth, pForceHeight );
-		updatePosition( pWidth, pHeight );
-		//
-		if( !p_silent )
-			notify();
+		if ( disabled ) return;
+		invalidate();
+		updateSize(pWidth, pHeight, pForceWidth, pForceHeight);
+		updatePosition(pWidth, pHeight);
 	}
 	
 	function updatePosition( pContainerWidth:Float, pContainerHeight:Float )
 	{
-		var left 	= paddingLeft;
-		var right 	= paddingRight;
-		var top 	= paddingTop;
-		var bottom 	= paddingBottom;
+		var left 	= marginLeft;
+		var right 	= marginRight;
+		var top 	= marginTop;
+		var bottom 	= marginBottom;
 		
 		var layout = if ( hLayout == INHERITED ) parent.hLayout else hLayout;
 		switch( layout )
@@ -268,21 +333,21 @@ class Element
 	
 	function updateSize( pContainerWidth:Float, pContainerHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float> ):Void 
 	{
-		paddingLeft 	= px(config.paddingLeft, 	(pForceWidth==null	? pContainerWidth 	: pForceWidth));
-		paddingRight 	= px(config.paddingRight, 	(pForceWidth==null	? pContainerWidth	: pForceWidth));
-		paddingTop 		= px(config.paddingTop, 	(pForceHeight==null	? pContainerHeight	: pForceHeight));
-		paddingBottom 	= px(config.paddingBottom, 	(pForceHeight==null	? pContainerHeight	: pForceHeight));
+		marginLeft 	= px(style.marginLeft, 	(pForceWidth==null	? pContainerWidth 	: pForceWidth));
+		marginRight 	= px(style.marginRight, 	(pForceWidth==null	? pContainerWidth	: pForceWidth));
+		marginTop 		= px(style.marginTop, 		(pForceHeight==null	? pContainerHeight	: pForceHeight));
+		marginBottom 	= px(style.marginBottom, 	(pForceHeight==null	? pContainerHeight	: pForceHeight));
 		
-		var elementWidth 	= px(config.width, pContainerWidth);
-		var elementHeight 	= px(config.height, pContainerHeight);
+		var elementWidth 	= px(style.width, pContainerWidth);
+		var elementHeight 	= px(style.height, pContainerHeight);
 		
-		var screenWidth 	= 	(pForceWidth==null ? elementWidth:pForceWidth) - paddingLeft - paddingRight;
-		var screenHeight 	= 	(pForceHeight==null? elementHeight:pForceHeight) - paddingTop - paddingBottom;
+		var screenWidth 	= 	(pForceWidth==null ? elementWidth:pForceWidth) - marginLeft - marginRight;
+		var screenHeight 	= 	(pForceHeight==null? elementHeight:pForceHeight) - marginTop - marginBottom;
 		
-		if( config.minWidth != null && screenWidth < px(config.minWidth, pContainerWidth) ) 	screenWidth 	= px(config.minWidth, pContainerWidth);
-		if( config.maxWidth != null && screenWidth > px(config.maxWidth, pContainerWidth) ) 	screenWidth 	= px(config.maxWidth, pContainerWidth);
-		if( config.minHeight != null && screenHeight < px(config.minHeight, pContainerHeight) ) screenHeight 	= px(config.minHeight, pContainerHeight);
-		if( config.maxHeight != null && screenHeight > px(config.maxHeight, pContainerHeight) ) screenHeight 	= px(config.maxHeight, pContainerHeight);
+		if( style.minWidth != null && screenWidth < px(style.minWidth, pContainerWidth) ) 		screenWidth 	= px(style.minWidth, pContainerWidth);
+		if( style.maxWidth != null && screenWidth > px(style.maxWidth, pContainerWidth) ) 		screenWidth 	= px(style.maxWidth, pContainerWidth);
+		if( style.minHeight != null && screenHeight < px(style.minHeight, pContainerHeight) ) screenHeight 	= px(style.minHeight, pContainerHeight);
+		if( style.maxHeight != null && screenHeight > px(style.maxHeight, pContainerHeight) ) screenHeight 	= px(style.maxHeight, pContainerHeight);
 		
 		switch( aspect )
 		{

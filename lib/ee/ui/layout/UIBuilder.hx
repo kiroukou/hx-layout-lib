@@ -1,14 +1,69 @@
 package ee.ui.layout;
 
-import haxe.xml.Access;
+import ee.ui.comp.UIComponent;
 import ee.ui.layout.Element;
 
 class UIBuilder
 {
-	public static function build( pXml:Xml ):Element
+	static var uiMap:Map<ee.ui.comp.UIComponent, Element> = new Map();
+	public static function build( pXml:Xml, ?pProtected:Array<String> ):Element
 	{		
-		var root = parse( pXml.firstElement() );
-		return root;
+		return cast parse( pXml.firstElement(), pProtected );
+	}
+	
+	public static function getLayout(pComponent:ee.ui.comp.UIComponent)
+	{
+		return uiMap.get(pComponent);
+	}
+	
+	public static function syncWithLayout(pComponent:ee.ui.comp.UIComponent)
+	{
+		var l = getLayout(pComponent);
+		pComponent.x = l.x;
+		pComponent.y = l.y;
+		pComponent.resize(l.width, l.height);
+	}
+	
+	public static function mapUI(pLayout:Element, pComponent:ee.ui.comp.UIComponent)
+	{
+		pComponent.visible = !pLayout.disabled;
+		
+		uiMap.set(pComponent, pLayout);
+
+		if( pLayout.viewStyle != null ) 
+			pComponent.applyStyle(pLayout.viewStyle);
+
+		if( pLayout.script.interp != null )
+			pLayout.script.interp.variables.set("component", pComponent);
+		
+		pLayout.onDisabled = function() {
+			pComponent.visible = !pLayout.disabled;
+		}
+		
+		pLayout.onUpdate = function() {
+			@:privateAccess pLayout.callScript("onBeforeResize");
+			pComponent.x = pLayout.x;
+			pComponent.y = pLayout.y;
+			pComponent.resize(pLayout.width, pLayout.height);
+			@:privateAccess pLayout.callScript("onAfterResize");
+		}
+
+		if( Std.is(pLayout, ee.ui.layout.IElementContainer) )
+		{
+			var l:ee.ui.layout.IElementContainer = cast pLayout;
+			for( e in l.getElements() )
+			{
+				var name = e.name;
+				var o = pComponent.getObjectByName(name);
+				if( o != null )
+				{
+					mapUI(cast e, cast o);
+				}
+			}
+		}
+
+		pLayout.script.eval();
+		@:privateAccess pLayout.callScript("onInit");
 	}
 	
 	inline static function getVAlign(att:String) {
@@ -51,31 +106,74 @@ class UIBuilder
 		return r;
 	}
 	
-	static function parse( pNode:Xml )
+	static function parse( pNode:Xml, ?pProtected:Array<String>  )
 	{
 		var elements = pNode.elements();
 		var parent = parseNode(pNode);
-		if ( !Std.is( parent, IElementContainer) && elements.hasNext() )
+
+		for ( e in pNode.elements() )
 		{
-			//disabled for now, since we have scripts/styles nodes
-			//throw "node Element cannot have some children";
-		}
-		else if ( Std.is( parent, IElementContainer) )
-		{
-			var parent = cast( parent, IElementContainer);
-			for ( e in pNode.elements() )
+			if ( e.nodeType != Xml.Element ) continue;
+			
+			var nodeName = e.nodeName.toLowerCase();
+			if ( pProtected != null && Lambda.has(pProtected, nodeName) )   
+				throw nodeName+" is a protected keyword !";
+			
+			switch( nodeName )
 			{
-				if ( e.nodeType != Xml.Element ) continue;
-				if( e.nodeName == 'Script') continue;
-				if( e.nodeName == 'Style') continue;
-				
-				var element = parse( e );
-				parent.addElement(element);
+				case "script":
+					var a = new haxe.xml.Access(e);
+					parseScript(a.innerData, cast parent);
+				case "style":
+					var a = new haxe.xml.Access(e);
+					parseStyle(a.innerData, cast parent);
+				default:
+					var element:ee.ui.layout.Element = parse( e );
+					cast( parent, IElementContainer).addElement(element);
 			}
 		}
+
 		return parent;
 	}
 	
+	static function parseScript(pScript:String, pElement:Element)
+	{
+		if( pElement.script.content == pScript ) return;
+
+		if( pElement.script.interp == null ) {
+			var interp = new hscript.Interp();
+			interp.variables.set("trace", function(log) {
+				haxe.Log.trace("(script "+pElement.name+") "+log);
+			});
+			
+			interp.variables.set("find", pElement.getElementByName);
+			interp.variables.set("px", ee.Metrics.px);
+			interp.variables.set("this", pElement);
+			interp.variables.set("document", pElement.root);
+			
+			pElement.script.interp = interp;
+		}
+		
+		var parser = new hscript.Parser();
+		var program = parser.parseString(pScript);
+		pElement.script.eval = function() {
+			return pElement.script.interp.execute(program);
+		}
+		
+		pElement.script.content = pScript;
+	}
+
+	static function parseStyle(pStyle:String, pElement:Element)
+	{
+		var interp = new hscript.Interp();
+		var parser = new hscript.Parser();
+		interp.variables.set("hex", ee.ui.Color.fromString);
+		interp.variables.set("color", ee.ui.Color.fromARGBf);
+		parser.allowJSON = true;
+		var program = parser.parseString(pStyle);
+		var style = interp.execute(program);
+		pElement.viewStyle = style;
+	}
 	
 	static function parseNode( pXmlNode:Xml ):Element
 	{
@@ -85,7 +183,7 @@ class UIBuilder
 			return pXmlNode.exists(att);
 		}
 		
-		inline function getAtt(att:String):Null<String>
+		function getAtt(att:String):Null<String>
 		{
 			if ( !pXmlNode.exists(att) ) throw "Current node doesn't have the attribute " + att + " defined";
 			readAttr.push(att);
@@ -117,14 +215,18 @@ class UIBuilder
 		}
 		
 		var noAttributes = false;
-		var e = switch( pXmlNode.nodeName.toLowerCase() )
+		var nodeName = pXmlNode.nodeName.toLowerCase();
+		var e = switch(nodeName)
 		{
-			case "hbox", "vbox": 
+			case "hbox", "vbox", "box": 
 				var w = hasAtt('width') ? getAtt('width') : '100%';
 				var h = hasAtt('height') ? getAtt('height') : '100%';
 				var b = new ee.ui.layout.BoxLayout(w, h, hAlign, vAlign, aspect ); 
 				b.name = id;
-				b.vertical = pXmlNode.nodeName == "vbox"; 
+				
+				if ( nodeName == "box" ) 	b.vertical = hasAtt("vertical") && getAtt("vertical").toLowerCase() == "true";
+				else 						b.vertical = nodeName == "vbox";
+				
 				b.autoSize = hasAtt("autoSize") && getAtt("autoSize").toLowerCase() == "true";
 				
 				if ( hasAtt("childAlign") )
@@ -133,7 +235,6 @@ class UIBuilder
 					b.hChildrenLayout = r.h;
 					b.vChildrenLayout = r.v;
 				}
-				
 				
 				if( hasAtt('childPadding') )
 					b.childPadding = getAtt('childPadding');
@@ -158,23 +259,25 @@ class UIBuilder
 				var e = new ElementStack();
 				e.name = id;
 				if( hasAtt("selectedIndex") )
-					e.index = Std.parseInt(getAtt("selectedIndex"));
+					@:privateAccess e.index = Std.parseInt(getAtt("selectedIndex"));
 				e;
 				
-			default : throw pXmlNode.nodeName + " is not a valid layout element";
+			default : throw nodeName + " is not a valid layout element";
 		}
 		
 		//CONFIG attributes
 		if( noAttributes == false )
 		{
-			if( hasAtt('minHeight') ) e.config.minHeight = getAtt('minHeight');
-			if( hasAtt('minWidth') ) e.config.minWidth = getAtt('minWidth');
-			if( hasAtt('maxHeight') ) e.config.maxHeight = getAtt('maxHeight');
-			if( hasAtt('maxWidth') ) e.config.maxWidth = getAtt('maxWidth');
-			if( hasAtt('paddingLeft') ) e.config.paddingLeft = getAtt('paddingLeft');
-			if( hasAtt('paddingRight') ) e.config.paddingRight = getAtt('paddingRight');
-			if( hasAtt('paddingTop') ) e.config.paddingTop = getAtt('paddingTop');
-			if( hasAtt('paddingBottom') ) e.config.paddingBottom = getAtt('paddingBottom');
+			if( hasAtt('minHeight') ) e.style.minHeight = getAtt('minHeight');
+			if( hasAtt('minWidth') ) e.style.minWidth = getAtt('minWidth');
+			if( hasAtt('maxHeight') ) e.style.maxHeight = getAtt('maxHeight');
+			if( hasAtt('maxWidth') ) e.style.maxWidth = getAtt('maxWidth');
+
+			if( hasAtt('margin') )  e.style.marginTop = e.style.marginBottom = e.style.marginRight = e.style.marginLeft = getAtt('margin');
+			if( hasAtt('marginLeft') ) e.style.marginLeft = getAtt('marginLeft');
+			if( hasAtt('marginRight') ) e.style.marginRight = getAtt('marginRight');
+			if( hasAtt('marginTop') ) e.style.marginTop = getAtt('marginTop');
+			if( hasAtt('marginBottom') ) e.style.marginBottom = getAtt('marginBottom');
 			if( hasAtt('disabled') ) e.disabled = getAtt('disabled').toLowerCase() == "true";
 		}
 		
@@ -187,19 +290,6 @@ class UIBuilder
 			{
 				throw "Attribute " + att + " is not used or invalid on the node " + id;
 			}
-		}
-
-		//Todo
-		var access = new haxe.xml.Access(pXmlNode);
-
-		e.script = "";
-		for( scriptNode in access.nodes.Script ) {
-			e.script += (scriptNode.innerData);
-		}
-		
-		e.style = "";
-		for( styleNode in access.nodes.Style ) {
-			e.style += (styleNode.innerData);
 		}
 		
 		return e;

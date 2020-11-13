@@ -7,15 +7,31 @@ import ee.ui.layout.Element;
 */
 class CanvasLayout extends Element implements IElementContainer
 {	
-	var mElements:Array<Element>;
-	public var hChildrenLayout:HLayoutKind;
-	public var vChildrenLayout:VLayoutKind;
+	public var hChildrenLayout(default, set):HLayoutKind;
+	inline function set_hChildrenLayout(pVal) {
+		if ( pVal != hChildrenLayout ) {
+			invalidate();
+			hChildrenLayout = pVal;
+		}
+		return hChildrenLayout;
+	}
+	
+	public var vChildrenLayout(default, set):VLayoutKind;
+	inline function set_vChildrenLayout(pVal) {
+		if ( pVal != vChildrenLayout ) {
+			invalidate();
+			vChildrenLayout = pVal;
+		}
+		return vChildrenLayout;
+	}
+	
 	public var numElements(get, null):Int;
 	inline function get_numElements():Int
 	{
 		return mElements.length;
 	}
 	
+	var mElements:Array<Element>;
 	public function new(pWidth:String, pHeight:String, ?pHorizontalLayout:HLayoutKind=null, ?pVerticalLayout:VLayoutKind=null, ?pAspect:AspectKind=null)
 	{
 		super(pWidth, pHeight, pHorizontalLayout, pVerticalLayout, pAspect);
@@ -48,14 +64,7 @@ class CanvasLayout extends Element implements IElementContainer
 			e.clean();
 		super.clean();
 	}
-	
-	override public function notify()
-	{
-		super.notify();
-		for ( e in mElements ) 
-			if( !e.disabled ) e.notify();
-	}
-	
+
 	override public function getElementByName( pName:String ):Null<Element>
 	{
 		var el = super.getElementByName(pName);
@@ -78,7 +87,7 @@ class CanvasLayout extends Element implements IElementContainer
 		var e = new CanvasLayout("1", "1");
 		e.name = this.name;
 		e.parent = this.parent;
-		e.config = { paddingLeft:config.paddingLeft, paddingRight:config.paddingRight, paddingTop:config.paddingTop, paddingBottom:config.paddingBottom, width:config.width, height:config.height };
+		e.style = Reflect.copy(style);
 		e.vLayout = this.vLayout;
 		e.hLayout = this.hLayout;
 		e.aspect = this.aspect;
@@ -98,47 +107,46 @@ class CanvasLayout extends Element implements IElementContainer
 		return mElements.copy();
 	}
 	
-	
-	public function refresh(?p_silent:Bool=false)
+	override public function refresh()
 	{
-		for( e in mElements )
+		if ( invalidated )
 		{
-			if( e.disabled ) continue;
-			e.resize( contentWidth, contentHeight );
+			for( e in mElements )
+			{
+				if( e.disabled ) continue;
+				e.resize( contentWidth, contentHeight );
+			}
 		}
+		
+		for ( e in mElements )
+			e.refresh();
+		
+		super.refresh();
 	}
 	
-	override public function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float>, ?p_silent:Bool=false)
+	public function addElement (child:Element) : Element 
 	{
-		if ( disabled ) return;
-		super.resize( pWidth, pHeight, pForceWidth, pForceHeight, true );
-		refresh(p_silent);
+		return addElementAt(child, mElements.length);
 	}
 	
-	public function addElement (child:Element, ?p_silent:Bool) : Element 
-	{
-		return addElementAt(child, mElements.length, p_silent);
-	}
-	
-	public function addElementAt (child:Element, p_index:Int, ?p_silent:Bool) : Element
+	public function addElementAt (child:Element, p_index:Int) : Element
 	{
 		mElements[p_index] = child;
 		child.parent = this;
 		if( !child.disabled )
-			refresh(p_silent);
+			invalidate();
 		return child;
 	}
 	
-	public function removeElement(child:Element, ?p_silent:Bool):Bool
+	public function removeElement(child:Element):Bool
 	{
 		if( mElements.remove(child) )
 		{
 			if( !child.disabled )
-				refresh(p_silent);
+				invalidate();
 			return true;
 		} else {
 			return false;
 		}
 	}
-
 }

@@ -1,6 +1,6 @@
 package ee.ui.comp;
 
-class Background extends h2d.Layers implements ee.ui.comp.Resizable
+class Background extends h2d.Layers implements ee.ui.layout.Resizable
 {
 	var outline:h2d.Bitmap;
 	var background:h2d.Bitmap;

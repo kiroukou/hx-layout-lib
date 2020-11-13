@@ -2,9 +2,28 @@ package ee.ui.layout;
 
 import ee.ui.layout.Element;
 
+
 class ElementStack extends Element implements IElementContainer
 {	
-	public var onChange:List<Element->Element->Void>;
+	public var onChange:Element->Element->Void;
+	
+	public var hChildrenLayout(default, set):HLayoutKind;
+	inline function set_hChildrenLayout(pVal) {
+		if ( pVal != hChildrenLayout ) {
+			invalidate();
+			hChildrenLayout = pVal;
+		}
+		return hChildrenLayout;
+	}
+	
+	public var vChildrenLayout(default, set):VLayoutKind;
+	inline function set_vChildrenLayout(pVal) {
+		if ( pVal != vChildrenLayout ) {
+			invalidate();
+			vChildrenLayout = pVal;
+		}
+		return vChildrenLayout;
+	}
 	
 	public var currentElement(default, null):Element;
 	public var selectedIndex(get, set):Int;
@@ -13,9 +32,6 @@ class ElementStack extends Element implements IElementContainer
 	{
 		return mElements.length;
 	}
-
-	public var hChildrenLayout:HLayoutKind;
-	public var vChildrenLayout:VLayoutKind;
 	
 	var mElements:Array<Element>;
 	var mLastWidth:Float;
@@ -23,12 +39,11 @@ class ElementStack extends Element implements IElementContainer
 	var mLastForcedWidth:Null<Float>;
 	var mLastForcedHeight:Null<Float>;
 	var mReady:Bool;
-	@:allow(ee.ui.layout) var index:Int;
+	@:allow(layout) var index:Int;
 	
 	public function new()
 	{
 		super("0", "0");
-		onChange = new List();
 		mElements = new Array();
 		mReady = false;
 		index = 0;
@@ -36,11 +51,21 @@ class ElementStack extends Element implements IElementContainer
 		mLastForcedHeight = mLastForcedWidth = null;
 	}
 	
-	public function refresh(?p_silent:Bool)
+	override public function refresh()
 	{
 		if( currentElement != null )
-			currentElement.resize(mLastWidth, mLastHeight, mLastForcedWidth, mLastForcedHeight, p_silent);
+			currentElement.refresh();
+		super.refresh();
 	}
+	
+	/*
+	override public function eval()
+	{
+		super.eval();
+		for ( e in mElements )
+			e.eval();
+	}
+	*/
 	
 	inline function get_selectedIndex()
 	{
@@ -50,7 +75,7 @@ class ElementStack extends Element implements IElementContainer
 	//TODO invalidate parent layout !!  Find a way to do that
 	function set_selectedIndex(p_index:Int):Int
 	{
-		p_index = Std.int(Math.max(0, Math.min(p_index, mElements.length-1)));
+		p_index = Std.int(Math.max(0, Math.min(p_index, mElements.length-1)));// mt.MLib.wrap(p_index, 0, mElements.length - 1);
 		//
 		if( mReady && selectedIndex == p_index ) return p_index;
 		//
@@ -61,7 +86,7 @@ class ElementStack extends Element implements IElementContainer
 		this.hLayout = currentElement.hLayout;
 		this.vLayout = currentElement.vLayout;
 		this.aspect = currentElement.aspect;
-		this.config = currentElement.config;
+		this.style = currentElement.style;
 		
 		this.contentHeight = currentElement.contentHeight;
 		this.contentWidth = currentElement.contentWidth;
@@ -70,7 +95,7 @@ class ElementStack extends Element implements IElementContainer
 		this.bounds = currentElement.bounds;	
 		mReady = true;
 		//
-		for( f in onChange ) f( oldElement, currentElement );
+		if( onChange != null ) onChange( oldElement, currentElement );
 		return selectedIndex;
 	}
 	
@@ -108,7 +133,7 @@ class ElementStack extends Element implements IElementContainer
 	{
 		for( e in mElements )
 			e.clean();
-		onChange = new List();
+		onChange = null;
 		super.clean();
 	}
 	
@@ -123,7 +148,7 @@ class ElementStack extends Element implements IElementContainer
 		return mElements.copy();
 	}
 	
-	override public function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float>, ?p_silent:Bool=false )
+	override public function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float> )
 	{
 		if ( disabled ) return;
 		mLastWidth 	= pWidth; 
@@ -133,7 +158,7 @@ class ElementStack extends Element implements IElementContainer
 		//
 		if( currentElement != null )
 		{
-			currentElement.resize( pWidth, pHeight, pForceWidth, pForceHeight, p_silent );
+			currentElement.resize( pWidth, pHeight, pForceWidth, pForceHeight );
 		}
 	}
 	
@@ -142,30 +167,30 @@ class ElementStack extends Element implements IElementContainer
 		selectedIndex = mElements.indexOf(p_element);
 	}
 	
-	public function removeElement(child:Element,  ?p_silent:Bool):Bool
+	public function removeElement(child:Element):Bool
 	{
 		if( mElements.remove(child) )
 		{
-			refresh(p_silent);
+			invalidate();
 			return true;
 		} else {
 			return false;
 		}
 	}
 	
-	public function addElement (child:Element, ?p_silent:Bool) : Element 
+	public function addElement (child:Element) : Element 
 	{
-		return addElementAt(child, mElements.length, p_silent);
+		return addElementAt(child, mElements.length);
 	}
 	
-	public function addElementAt (child:Element, p_index:Int, ?p_silent:Bool) : Element
+	public function addElementAt (child:Element, p_index:Int) : Element
 	{
 		mElements[p_index] = child;
 		child.parent = this;
 		if( !mReady && selectedIndex == (mElements.length - 1) )
 			selectedIndex = selectedIndex;
 		if( !child.disabled )
-			refresh(p_silent);
+			invalidate();
 		return child;
 	}
 	
@@ -174,7 +199,7 @@ class ElementStack extends Element implements IElementContainer
 		var e = new ElementStack();
 		e.name = this.name;
 		e.parent = this.parent;
-		e.config = { paddingLeft:config.paddingLeft, paddingRight:config.paddingRight, paddingTop:config.paddingTop, paddingBottom:config.paddingBottom, width:config.width, height:config.height };
+		e.style = Reflect.copy(style);
 		e.vLayout = this.vLayout;
 		e.hLayout = this.hLayout;
 		e.aspect = this.aspect;

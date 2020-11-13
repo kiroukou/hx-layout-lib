@@ -1,59 +1,55 @@
 package ee.ui.comp;
 
-
-class UIComponent extends h2d.Object implements Resizable
+class UIComponent extends h2d.Object implements ee.ui.layout.Resizable
 {
     var _isInit:Bool;
 
     public var background:Background;
-    public var view:h2d.Object;
 
+    /*
     var interp:hscript.Interp;
     var parser:hscript.Parser;
 
     var rawScript:String;
     var rawStyle:String;
+    */
 
-    public function new(parent:h2d.Object, ?p_view) 
+    public function new(parent:h2d.Object) 
     {
         super(parent);
-        interp = new hscript.Interp();
-        parser = new hscript.Parser();
+     //   interp = new hscript.Interp();
+    //    parser = new hscript.Parser();
         _isInit = false;
 
         background = new Background(this);
-        if( p_view != null ) this.view = p_view;
     }
 
     public function resize(pWidth:Float, pHeight:Float):Void
     {
         background.resize(pWidth, pHeight);
         //TODO, do that for view !
-        callScriptFn("onResize");
+       // callScriptFn("onResize");
     }
 
     public function init()
     {
         if( _isInit ) return;
         _isInit = true;
-        callScriptFn("onInit");
+       // callScriptFn("onInit");
     }
 
+    /*
     function callScriptFn(fnName:String) {
         if( interp == null ) return;
         var cb = interp.variables.get(fnName);
         if( cb != null ) cb();
     }
-
-    public function update(dt) 
-    {
-        callScriptFn("onUpdate");
-    }
+    */
 
     public function applyStyle(style:ee.ui.comp.Style) {
         background.applyStyle( style);
     }
-
+/*
     public function parseStyle(styleContent:String) {
         styleContent = StringTools.trim(styleContent);
         if( this.rawStyle == styleContent ) return;
@@ -86,7 +82,7 @@ class UIComponent extends h2d.Object implements Resizable
 			trace(e);
 		}
     }
-
+*/
     /**
 	 * The shape will be scaled to fit the destination sizes keeping its original ratio
 	 * The shape will fit AT MAXIMUM the targeted rectangle

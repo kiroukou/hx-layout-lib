@@ -1,5 +1,7 @@
 package;
 
+import hxd.Window;
+
 class Main extends hxd.App 
 {
 	public static function main() 
@@ -23,12 +25,14 @@ class Main extends hxd.App
 	// if the window is resized
 	override function onResize() 
 	{
-		scene.resize();
+		trace("onResize APp");
+		scene.layout.resize(Window.getInstance().width, Window.getInstance().height);
+		scene.layout.refresh();
 	}
 
 	override function update(dt:Float) 
 	{
 		super.update(dt);
-		scene.update(dt);
+		//scene.update(dt);
 	}
 }

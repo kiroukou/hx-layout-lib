@@ -1,4 +1,4 @@
-package ee.ui.comp;
+package ee.ui.layout;
 
 interface Resizable
 {
