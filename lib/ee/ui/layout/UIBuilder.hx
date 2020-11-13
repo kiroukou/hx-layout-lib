@@ -66,6 +66,9 @@ class UIBuilder
 			for ( e in pNode.elements() )
 			{
 				if ( e.nodeType != Xml.Element ) continue;
+				if( e.nodeName == 'Script') continue;
+				if( e.nodeName == 'Style') continue;
+				
 				var element = parse( e );
 				parent.addElement(element);
 			}

@@ -1,7 +1,29 @@
 
 <canvas id="layout" width="100%" height="100%" align="left, top">
-	<vbox id="boxMenu" width="50%" height="50%" align="center, middle" childAlign="right,bottom" paddingTop="10" paddingBottom="10" paddingLeft="0" paddingRight="0">
-		<element id="image" width="50%" height="50%" paddingTop="10" paddingBottom="10" paddingLeft="10" paddingRight="10">
+
+	<vbox id="boxMenu" width="90%" height="50%" align="left, middle" childAlign="right,bottom" paddingTop="10" paddingBottom="10" paddingLeft="10" paddingRight="10">
+		<Style>
+			<![CDATA[
+				{
+					"backgroundColor": "0x44333333",
+					"outlineThickness": 0,
+					"outlineColor": "0x999999"
+				}
+			]]>
+		</Style>
+
+		<element id="image" width="50%" height="20%" paddingTop="4" paddingBottom="4" paddingLeft="4" paddingRight="4">
+			<Style>
+				<![CDATA[
+					{
+						"backgroundColor": "0xFF9999",
+						"outlineThickness": 0,
+						"outlineColor": "0x999999"
+					}
+				]]>
+			</Style>
+		</element>
+		<element id="image2" width="50%" height="20%" paddingTop="4" paddingBottom="4" paddingLeft="4" paddingRight="4">
 			<Script>
 			<![CDATA[
 				function onInit() 
@@ -15,13 +37,13 @@
 				}
 			]]>
 			</Script>
-	
+
 			<Style>
 			<![CDATA[
 				{
-					"backgroundColor": "0xFF",
-					"outlineThickness": 2,
-					"outlineColor": "0xFF00FF"
+					"backgroundColor": "0xCCCCCC",
+					"outlineThickness": 0,
+					"outlineColor": "0x999999"
 				}
 			]]>
 			</Style>
