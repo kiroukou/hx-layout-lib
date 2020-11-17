@@ -5,7 +5,7 @@ import ee.Metrics.Px;
 /**
  * Configuration of the element
  */
-typedef ElementStyle = {
+typedef ElementConfig = {
 
 	var width:String;
 	var height:String;
@@ -63,38 +63,41 @@ typedef ScriptInfo = {
 
 class Element
 {
+	/* EVENTS */
 	public var onUpdate:Void->Void;
 	public var onDisabled:Void->Void;
 	
 	public var onUpdateScript:Void->Void;
 	public var onDisabledScript:Void->Void;
+
+	/* PROPERTIES */
 	
 	public var name:String;
-	public var style(default, set):ElementStyle;
+	public var config(default, set):ElementConfig;
+	public var root(default, null):Null<IElementContainer>;
+
 	public var hLayout:HLayoutKind;
 	public var vLayout:VLayoutKind;
 	public var aspect:AspectKind;
 	
 	public var invalidated(default, null):Bool;
 	public var script:ScriptInfo;
-	public var viewStyle:Dynamic;
-	
+	public var viewStyle:ee.ui.comp.Style;
+
+	/* GETTERS / SETTERS */
 	public var marginLeft(default, null):Float;
 	public var marginRight(default, null):Float;
 	public var marginTop(default, null):Float;
 	public var marginBottom(default, null):Float;
-	
 	public var x(default, null):Float;
 	public var y(default, null):Float;
-	
 	public var globalX(get, null):Float;
 	public var globalY(get, null):Float;
-	
 	public var width(default, null):Float;
 	public var height(default, null):Float;
 	public var bounds(default, null): Bounds;
-	
 	public var disabled(default, set):Bool;
+
 	inline function set_disabled(value:Bool):Bool {
 		if( value != disabled ) {
 			disabled = value;
@@ -179,11 +182,9 @@ class Element
 	inline function set_parent(pParent:Null<IElementContainer>):Null<IElementContainer>
 	{
 		if ( pParent != null ) root = pParent.root;
-		else root = null;		
+		else root = pParent;		
 		return parent = pParent;
 	}
-	
-	public var root(default, null):Null<IElementContainer>;
 	
 	inline function get_globalX() {
 		var v = x;
@@ -233,20 +234,20 @@ class Element
 		this.invalidated = true;
 		this.script = { eval:() -> null };
 		parent = null;
-		style = { marginLeft:"0", marginRight:"0", marginTop:"0", marginBottom:"0", width:StringTools.trim(pWidth), height:StringTools.trim(pHeight) };
+		config = { marginLeft:"0", marginRight:"0", marginTop:"0", marginBottom:"0", width:StringTools.trim(pWidth), height:StringTools.trim(pHeight) };
 	}
 	
-	function set_style(pStyle:ElementStyle)
+	function set_config(pConfig:ElementConfig)
 	{
-		for ( f in Reflect.fields(pStyle) )
+		for ( f in Reflect.fields(pConfig) )
 		{
-			if ( Reflect.field(style, f) != Reflect.field(pStyle, f) )
+			if ( Reflect.field(config, f) != Reflect.field(pConfig, f) )
 			{
 				invalidate();
 				break;
 			}
 		}
-		return this.style = pStyle;
+		return this.config = pConfig;
 	}
 	
 	public function refresh() : Void 
@@ -263,7 +264,7 @@ class Element
 	{
 		var e = new Element("1", "1");
 		e.name = this.name;
-		e.style = Reflect.copy(style);
+		e.config = Reflect.copy(config);
 		e.vLayout = this.vLayout;
 		e.hLayout = this.hLayout;
 		e.aspect = this.aspect;
@@ -291,10 +292,16 @@ class Element
 
 
 	function callScript(fnName:String) {
-        if( script.interp == null ) return;
-        var cb = script.interp.variables.get(fnName);
-		if( cb != null ) 
-			cb();
+		if( script.interp == null ) return;
+		try {
+			var cb = script.interp.variables.get(fnName);
+			if( cb != null ) 
+				cb();
+		} catch(e : Dynamic ) {
+			trace("Error on script node function "+fnName);
+			trace(Std.string(e));
+
+		}
     }
 	
 	public function resize( pWidth:Float, pHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float>)
@@ -333,21 +340,21 @@ class Element
 	
 	function updateSize( pContainerWidth:Float, pContainerHeight:Float, ?pForceWidth:Null<Float>, ?pForceHeight:Null<Float> ):Void 
 	{
-		marginLeft 	= px(style.marginLeft, 	(pForceWidth==null	? pContainerWidth 	: pForceWidth));
-		marginRight 	= px(style.marginRight, 	(pForceWidth==null	? pContainerWidth	: pForceWidth));
-		marginTop 		= px(style.marginTop, 		(pForceHeight==null	? pContainerHeight	: pForceHeight));
-		marginBottom 	= px(style.marginBottom, 	(pForceHeight==null	? pContainerHeight	: pForceHeight));
+		marginLeft 	= px(config.marginLeft, 	(pForceWidth==null	? pContainerWidth 	: pForceWidth));
+		marginRight 	= px(config.marginRight, 	(pForceWidth==null	? pContainerWidth	: pForceWidth));
+		marginTop 		= px(config.marginTop, 		(pForceHeight==null	? pContainerHeight	: pForceHeight));
+		marginBottom 	= px(config.marginBottom, 	(pForceHeight==null	? pContainerHeight	: pForceHeight));
 		
-		var elementWidth 	= px(style.width, pContainerWidth);
-		var elementHeight 	= px(style.height, pContainerHeight);
+		var elementWidth 	= px(config.width, pContainerWidth);
+		var elementHeight 	= px(config.height, pContainerHeight);
 		
 		var screenWidth 	= 	(pForceWidth==null ? elementWidth:pForceWidth) - marginLeft - marginRight;
 		var screenHeight 	= 	(pForceHeight==null? elementHeight:pForceHeight) - marginTop - marginBottom;
 		
-		if( style.minWidth != null && screenWidth < px(style.minWidth, pContainerWidth) ) 		screenWidth 	= px(style.minWidth, pContainerWidth);
-		if( style.maxWidth != null && screenWidth > px(style.maxWidth, pContainerWidth) ) 		screenWidth 	= px(style.maxWidth, pContainerWidth);
-		if( style.minHeight != null && screenHeight < px(style.minHeight, pContainerHeight) ) screenHeight 	= px(style.minHeight, pContainerHeight);
-		if( style.maxHeight != null && screenHeight > px(style.maxHeight, pContainerHeight) ) screenHeight 	= px(style.maxHeight, pContainerHeight);
+		if( config.minWidth != null && screenWidth < px(config.minWidth, pContainerWidth) ) 		screenWidth 	= px(config.minWidth, pContainerWidth);
+		if( config.maxWidth != null && screenWidth > px(config.maxWidth, pContainerWidth) ) 		screenWidth 	= px(config.maxWidth, pContainerWidth);
+		if( config.minHeight != null && screenHeight < px(config.minHeight, pContainerHeight) ) screenHeight 	= px(config.minHeight, pContainerHeight);
+		if( config.maxHeight != null && screenHeight > px(config.maxHeight, pContainerHeight) ) screenHeight 	= px(config.maxHeight, pContainerHeight);
 		
 		switch( aspect )
 		{

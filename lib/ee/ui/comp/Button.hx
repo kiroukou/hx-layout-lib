@@ -1,83 +1,76 @@
 package ee.ui.comp;
 
-class Button extends h2d.Sprite
+class Button extends UIComponent
 {
-	public var inter : h2d.Interactive;
-	public var lbl : h2d.Text;
-	var bg  : h2d.Graphics;
-	var colorMain : Int;
-	var colorDark : Int;
-	
-	//@:getter(width)
-	override function get_width():Float 
+	public static var DEFAULT_FONT_SIZE = 24;
+	var label : h2d.Text;
+	var fontSize : Int;
+
+	override public function init()
 	{
-		return width;
-	}
-	
-	//@:setter(width)
-	override function set_width(value:Float):Float 
-	{
-		return width = value;
-	}
-	
-	//@:getter(height)
-	override function get_height():Float 
-	{
-		return height;
-	}
-	
-	//@:setter(height)
-	override function set_height(value:Float):Float 
-	{
-		return height = value;
-	}
-	
-	public function new(color : Int, text : String, ?p) {
-		super(p);
-		colorMain = color;
-		
-		var cd = new h3d.Vector();
-		cd.setColor(colorMain);
-		colorDark = Style.darken(cd).toColor();
-		
-		bg  = new h2d.Graphics(this);
-		lbl = new h2d.Text(Assets.FONT_MEDIUM, this);
-		lbl.text = text;
-		
-		width = 100;
-		height = 24;
-		
-		inter = new h2d.Interactive(0, 0, this);
-		inter.onRelease = function(_) {
-			if(inter.visible) SoundsManager.play(UI_BUTTON_CLICK);
+		if( !_isInit ) 
+		{
+			super.init();
+			fontSize = DEFAULT_FONT_SIZE;
+			this.label = new h2d.Text(hxd.res.DefaultFont.get(), this);
+			setInteractive(true);
 		}
 	}
-	
-	public function resize(w : Float, h : Float) {
-		width  = w;
-		height = h;
-		
-		inter.width = w;
-		inter.height = h;
 
-		bg.clear();
-		bg.beginFill(colorMain);
-		bg.drawRect(0, 0, w, h);
-		bg.endFill();
-		
-		bg.beginFill(colorDark);
-		bg.drawRect(0, h - Style.gutterSize, w, Style.gutterSize);
-		bg.endFill();
-		
-		lbl.x = (w - lbl.textWidth) / 2;
-		lbl.y = (h - lbl.textHeight - Style.gutterSize) / 2;
+	override function onOut(e) {
+		super.onOut(e);
+		this.background.applyStyle(cast style);
+	}
+
+	override function onOver(e) {
+		super.onOver(e);
+		this.background.applyStyle(cast style.states.hover);
+	}
+
+	override function onClick(e) {
+		super.onClick(e);
+	}
+
+	override function onPush(e) {
+		super.onPush(e);
+		this.background.applyStyle(cast style.states.click);
+	}
+
+	public function setLabel(t:String)
+	{
+		this.label.text = t;
 	}
 	
-	public function setColor(color : Int) {
-		var cd = new h3d.Vector();
-		colorMain = color;
-		cd.setColor(colorMain);
-		colorDark = Style.darken(cd).toColor();
-		resize(width, height);
+	override public function resize(w : Float, h : Float, bounds) {
+		super.resize(w, h, bounds);
+		label.constraintSize(w, h);
+		label.maxWidth = w;
 	}
+
+	override public function applyStyle(style:ee.ui.comp.Style) 
+	{
+		super.applyStyle(style);
+		if( style.textColor != null )
+			label.textColor = style.textColor;
+		
+	//	if( style.fontName != null )
+	//		label.font = hxd.res.FontBuilder.getFont(style.fontName, fontSize);
+	//
+
+	//	if(style.fontSize != null )
+	//		fontSize = style.fontSize;
+
+		
+		if( style.textAlign != null )
+		{
+			switch(style.textAlign)
+			{
+				case Left: label.textAlign = h2d.Text.Align.Left;
+				case Center:  label.textAlign = h2d.Text.Align.Center;
+				case Right:  label.textAlign = h2d.Text.Align.Right;
+			}
+		}
+
+	}
+
 }

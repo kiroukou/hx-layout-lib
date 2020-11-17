@@ -36,6 +36,7 @@ class CanvasLayout extends Element implements IElementContainer
 	{
 		super(pWidth, pHeight, pHorizontalLayout, pVerticalLayout, pAspect);
 		mElements = new Array();
+		root = this;
 	}
 	
 	public function getElementAt(p_index):Null<Element>
@@ -87,7 +88,7 @@ class CanvasLayout extends Element implements IElementContainer
 		var e = new CanvasLayout("1", "1");
 		e.name = this.name;
 		e.parent = this.parent;
-		e.style = Reflect.copy(style);
+		e.config = Reflect.copy(config);
 		e.vLayout = this.vLayout;
 		e.hLayout = this.hLayout;
 		e.aspect = this.aspect;

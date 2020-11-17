@@ -1,12 +1,19 @@
 package ee.ui.comp;
 
+import h3d.shader.Base2d;
+import h3d.mat.Texture;
+import h2d.Tile;
+import h3d.impl.NullDriver;
+using Std;
+
 class Background extends h2d.Layers implements ee.ui.layout.Resizable
 {
 	var outline:h2d.Bitmap;
 	var background:h2d.Bitmap;
-	var style:Style;
 	var w:Float;
 	var h:Float;
+	var thickness:Null<Int>;
+	var style:Style;
 	
 	public function new(?pParent:h2d.Object) 
 	{
@@ -25,53 +32,72 @@ class Background extends h2d.Layers implements ee.ui.layout.Resizable
 	
 	function adjustThickness(pThickness:Int)
 	{
-		background.x = background.y = pThickness;
-		background.tile.setSize(w - 2 * pThickness, h - 2 * pThickness);
+		//outer outline implementation
+		outline.x = outline.y = -pThickness;
+		if( outline.tile != null )
+		{
+			outline.tile.setSize(w + 2 * pThickness, h + 2*pThickness);
+		}
 	}
 	
 	public function applyStyle( pStyle:Style )
 	{
-		if ( style == null || pStyle.outlineColor != style.outlineColor )
+		this.style = pStyle;
+		//
+		if ( pStyle.outlineColor != null ) 
 		{
-			if ( pStyle.outlineColor != null ) 
-			{
-				outline.visible = true;
-				outline.tile = h2d.Tile.fromColor(pStyle.outlineColor);
-			}
-			else
-			{
-				outline.visible = false;
-			}
+			outline.visible = true;
+			outline.tile = h2d.Tile.fromColor(pStyle.outlineColor, w.int(), h.int());
 		}
-		if ( style == null || pStyle.backgroundColor != style.backgroundColor )
+		else
 		{
-			if ( pStyle.backgroundColor != null )
-			{
-				background.tile = h2d.Tile.fromColor(pStyle.backgroundColor);
-				background.visible = true;
-			}
-			else
-			{
-				background.visible = false;
-			}
+			outline.visible = false;
 		}
-		
-		if ( style == null || pStyle.outlineThickness != style.outlineThickness )
-			adjustThickness(pStyle.outlineThickness);
-		
-		style = Reflect.copy(pStyle);
+
+		if ( pStyle.backgroundTexture != null )
+		{
+			var t = hxd.Res.load(pStyle.backgroundTexture).toTile();
+			switch(pStyle.backgroundTextureMode)
+			{
+				case Repeat: 
+					background.tileWrap = true;
+				default:
+			}
+			
+			background.tile = t;
+			background.visible = true;
+		}
+		else if ( pStyle.backgroundColor != null )
+		{
+			background.tile = h2d.Tile.fromColor(pStyle.backgroundColor, w.int(), h.int());
+			background.visible = true;
+		}
+		else
+		{
+			background.visible = false;
+		}
+
+		thickness = null;
+		if( pStyle.outlineThickness != null ) 
+			thickness = pStyle.outlineThickness;
 	}
 	
-	public function resize(pWidth:Float, pHeight:Float):Void
+	public function resize(pWidth:Float, pHeight:Float, bounds):Void
 	{
 		w = pWidth;
 		h = pHeight;
-		if( outline.tile != null )
+		if( background.tile != null )
 		{
-			outline.tile.setSize(w, h);
+			switch(style.backgroundTextureMode)
+			{
+				case Scale:
+					background.tile.scaleToSize(w, h);
+				default:
+					background.tile.setSize(w, h);
+			}
 		}
 		
-		if( style != null ) 
-			adjustThickness(style.outlineThickness);
+		if( thickness != null ) 
+			adjustThickness(thickness);
 	}
 }

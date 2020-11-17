@@ -75,6 +75,7 @@ class BoxLayout extends Element implements IElementContainer
 		vChildrenLayout = VLayoutKind.TOP;
 		mElements = new Array();
 		childPadding = "0";
+		root = this;
 	}
 	
 	override public function clone():Element
@@ -82,7 +83,7 @@ class BoxLayout extends Element implements IElementContainer
 		var e = new BoxLayout("1", "1");
 		e.name = this.name;
 		e.parent = this.parent;
-		e.style = Reflect.copy(style);
+		e.config = Reflect.copy(config);
 		e.vLayout = this.vLayout;
 		e.hLayout = this.hLayout;
 		e.aspect = this.aspect;
@@ -215,7 +216,7 @@ class BoxLayout extends Element implements IElementContainer
 			for( e in mElements )
 			{
 				if( e.disabled ) continue;
-				if( vertical && px(e.style.height) >= 0 || !vertical && px(e.style.width) >= 0 )
+				if( vertical && px(e.config.height) >= 0 || !vertical && px(e.config.width) >= 0 )
 				{
 					e.resize( contentWidth, contentHeight );
 					if( vertical ) 	usedSpace += e.bounds.height;
@@ -224,16 +225,16 @@ class BoxLayout extends Element implements IElementContainer
 				else
 				{
 					postProcess.add(e);
-					if( vertical ) totalParts -= px(e.style.height);
-					else 		   totalParts -= px(e.style.width);
+					if( vertical ) totalParts -= px(e.config.height);
+					else 		   totalParts -= px(e.config.width);
 				}
 			}
 			
 			var freeSpace = vertical ? contentHeight - usedSpace : contentWidth - usedSpace;
 			for( e in postProcess )
 			{
-				if( vertical )	e.resize( contentWidth, contentHeight, null, -px(e.style.height)/totalParts * freeSpace );
-				else 			e.resize( contentWidth, contentHeight, -px(e.style.width)/totalParts * freeSpace, null );
+				if( vertical )	e.resize( contentWidth, contentHeight, null, -px(e.config.height)/totalParts * freeSpace );
+				else 			e.resize( contentWidth, contentHeight, -px(e.config.width)/totalParts * freeSpace, null );
 			}
 		}
 		

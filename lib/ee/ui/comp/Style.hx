@@ -2,29 +2,41 @@ package ee.ui.comp;
 
 import haxe.Json;
 
-typedef Style = {
-	?backgroundTexture:String,
-	?backgroundColor:ee.ui.Color,
-	?outlineColor:ee.ui.Color,
-	?outlineThickness:Int,
-	?textColor:ee.ui.Color
+@:enum 
+abstract TextureMode(String) {
+	var Repeat = 'repeat';
+	var None = '';
+	var Scale = 'scale';	
+}
+@:enum 
+abstract TextAlign(String) {
+	var Left = 'left';
+	var Center = 'center';
+	var Right = 'right';	
 }
 
-class StyleParser
-{
-	public static function parse(styleContent:String):Null<Style>
-	{
-		if( StringTools.trim(styleContent).length == 0 ) return null;
-		var raw:haxe.DynamicAccess<Dynamic> = Json.parse(styleContent);
+typedef Decoration = {
+	?texture:String,
+	?backgroundTexture:String,
+	?backgroundTextureMode:TextureMode,
+	?backgroundColor:ee.ui.Color,
 
-		var style:Style = {
-			textColor: ee.ui.Color.fromString(raw.get('textColor')),
-			outlineColor: ee.ui.Color.fromString(raw.get('outlineColor')),
-			backgroundColor : ee.ui.Color.fromString(raw.get('backgroundColor')),
-			backgroundTexture:  raw.get('backgroundTexture'),
-			outlineThickness: raw.get('outlineThickness')
-		}
-		//TODO make something safe ?
-		return style;
+	?outlineColor:ee.ui.Color,
+	?outlineThickness:Int,
+	
+	?color:ee.ui.Color,
+	?textColor:ee.ui.Color,
+	?fontSize:Int,
+	?fontName:String,
+	?textAlign:TextAlign,
+}
+
+typedef Style = {
+	> Decoration,
+	?component:String,
+	?textureMode:TextureMode,
+	?states: {
+		?hover:Style,
+		?click:Style,
 	}
 }

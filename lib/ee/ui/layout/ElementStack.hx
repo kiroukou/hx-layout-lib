@@ -49,6 +49,7 @@ class ElementStack extends Element implements IElementContainer
 		index = 0;
 		mLastWidth = mLastHeight = 0.0;
 		mLastForcedHeight = mLastForcedWidth = null;
+		root = this;
 	}
 	
 	override public function refresh()
@@ -86,7 +87,7 @@ class ElementStack extends Element implements IElementContainer
 		this.hLayout = currentElement.hLayout;
 		this.vLayout = currentElement.vLayout;
 		this.aspect = currentElement.aspect;
-		this.style = currentElement.style;
+		this.config = currentElement.config;
 		
 		this.contentHeight = currentElement.contentHeight;
 		this.contentWidth = currentElement.contentWidth;
@@ -199,7 +200,7 @@ class ElementStack extends Element implements IElementContainer
 		var e = new ElementStack();
 		e.name = this.name;
 		e.parent = this.parent;
-		e.style = Reflect.copy(style);
+		e.config = Reflect.copy(config);
 		e.vLayout = this.vLayout;
 		e.hLayout = this.hLayout;
 		e.aspect = this.aspect;

@@ -1,0 +1,75 @@
+
+<canvas id="layout" width="100%" height="100%" align="left, top">
+
+	<vbox id="boxMenu" width="100%" height="100%" align="center, middle" childPadding="8dp" childAlign="center,bottom" margin="8">
+		<style>
+			<![CDATA[
+				{
+					class : 'ee.ui.comp.UIComponent',
+					backgroundTextureMode: 'repeat',
+					backgroundTexture: 'bg_tile2.png',
+					//backgroundColor: color(.7, .5, .4, 0.9),//A R G B
+					//outlineThickness: 3,
+					//outlineColor: hex('0x2222FF')
+				}
+			]]>
+		</style>
+
+		<element id="image" aspect='keep_in' width="50%" height="20%" marginTop="0" marginBottom="0" marginLeft="0" marginRight="0">
+			<style>
+			<![CDATA[
+				{
+					component: 'comp.ImageComp',
+					texture: 'Haxe_logo.png',
+					color: hex('0xFF00FF00'),
+					textureMode: 'scale',
+					backgroundColor: hex('0x8888FF')
+				}
+			]]>
+			</style>
+		</element>
+
+		<element id="btn" width="50%" height="20%" marginTop="0" marginBottom="0" marginLeft="0" marginRight="0">
+			<script>
+			<![CDATA[
+				function onInit() {
+					component.setLabel("Clone my Haxe");
+				}
+				function onClick() {
+					trace("Button clicked "+this.name);
+					var n = find("boxMenu");
+					n.style.backgroundTexture = 'bg_tile1.png';
+					n.applyStyle(n.style);
+					/* TODO in progress, but issues to solve first on architecture itself
+					var c = find("image").clone();
+					c.name = "image"+this.parent.numElements;
+					trace("clone component : "+c.name);
+					this.parent.addElement(c);
+					this.parent.refresh();
+					*/
+				}
+			]]>
+			</script>
+
+			<style>
+			<![CDATA[
+				{
+					component: 'ee.ui.comp.Button',
+					textColor: hex('FF000000'),
+					//fontSize: 30,
+					color: hex('0xFF00FF00'),
+					backgroundColor: hex('0x8888FF'),
+					states : {
+						hover: {
+							backgroundColor: hex('0x888888'),
+						},
+						click: {
+							backgroundColor: hex('0xFF88FF'),
+						}
+					}
+				}
+			]]>
+			</style>
+		</element>
+	</vbox>
+</canvas>

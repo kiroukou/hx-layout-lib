@@ -1,0 +1,29 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "Haxe Interpreter",
+			"type": "haxe-eval",
+			"request": "launch"
+		},
+		{
+			"name": "HL",
+			"type": "hl",
+			"request": "launch",
+			"hxml": "build.hxml",
+			"cwd": "${workspaceRoot}",
+			
+			"preLaunchTask": "Debug",
+			"windows": {
+				"hl": ".hashlink\\hl.exe"
+			},
+			"linux": {
+				"hl": ".hashlink/hl",
+			},
+			"osx": {
+				"hl": ".hashlink/hl",
+			}
+
+		}
+	]
+}

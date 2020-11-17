@@ -1,92 +1,84 @@
 package ee.ui.comp;
 
+@:keep
+@:keepSub
 class UIComponent extends h2d.Object implements ee.ui.layout.Resizable
 {
-    var _isInit:Bool;
+    var _isInit:Bool = false;
+    var background:Background;
+    var inter : h2d.Interactive;
+    var style:Style;
+    var layout:ee.ui.layout.Element;
 
-    public var background:Background;
-
-    /*
-    var interp:hscript.Interp;
-    var parser:hscript.Parser;
-
-    var rawScript:String;
-    var rawStyle:String;
-    */
-
-    public function new(parent:h2d.Object) 
+    public function resize(pWidth:Float, pHeight:Float, bounds):Void
     {
-        super(parent);
-     //   interp = new hscript.Interp();
-    //    parser = new hscript.Parser();
-        _isInit = false;
-
-        background = new Background(this);
-    }
-
-    public function resize(pWidth:Float, pHeight:Float):Void
-    {
-        background.resize(pWidth, pHeight);
-        //TODO, do that for view !
-       // callScriptFn("onResize");
+        background.resize(pWidth, pHeight, bounds);
+        if( inter != null )
+        {
+            inter.width = pWidth;
+            inter.height = pHeight;
+        }
     }
 
     public function init()
     {
         if( _isInit ) return;
-        _isInit = true;
-       // callScriptFn("onInit");
-    }
+        background = new Background(this);
+        if( layout.script.content != null ) 
+            setInteractive(true);
 
-    /*
-    function callScriptFn(fnName:String) {
-        if( interp == null ) return;
-        var cb = interp.variables.get(fnName);
-        if( cb != null ) cb();
+        _isInit = true;
     }
-    */
 
     public function applyStyle(style:ee.ui.comp.Style) {
-        background.applyStyle( style);
-    }
-/*
-    public function parseStyle(styleContent:String) {
-        styleContent = StringTools.trim(styleContent);
-        if( this.rawStyle == styleContent ) return;
-        this.rawStyle = styleContent;
-        //TODO not what should be done I guess..
-        if( this.rawStyle == null || this.rawStyle.length == 0 ) return;
-        applyStyle(ee.ui.comp.Style.StyleParser.parse(styleContent));
+        this.style = style;
+        background.applyStyle(style);
+        //if( style.)
     }
 
-    public function parseScript(scriptContent:String) {
-        scriptContent = StringTools.trim(scriptContent);
-        if( this.rawScript == scriptContent ) return;
-        this.rawScript = scriptContent;
-        //TODO not what should be done I guess..
-        if( this.rawScript == null || this.rawScript.length == 0 ) return; 
-        //
-        var program = parser.parseString(scriptContent);
-		interp.variables.set("trace", function(msg:String) {
-			trace("LOG(#"+this.name+") "+ msg);
-        });
-        interp.variables.set("this", this);
-		
-		try {
-			interp.execute(program);
-		} catch( e: hscript.Expr.Error ) {
-			trace("Runtime Error "+this.name+":"+parser.line);
-			trace(e);
-		} catch( e: Dynamic ) {
-			trace("Unknown Runtime Error "+this.name+":"+parser.line);
-			trace(e);
-		}
+    function setInteractive(b:Bool)
+    {
+        if( inter != null && inter.visible == b ) return;
+        if( !b ) inter.remove();
+        else
+        {
+            inter = new h2d.Interactive(layout.width, layout.height, this);
+            inter.onClick = onClick;
+            inter.onOut = onOut;
+            inter.onOver = onOver;
+            inter.onPush = onPush;
+            inter.onRelease = onRelease.bind(_, false);
+            inter.onReleaseOutside = onRelease.bind(_, true);
+        }
     }
-*/
-    /**
-	 * The shape will be scaled to fit the destination sizes keeping its original ratio
-	 * The shape will fit AT MAXIMUM the targeted rectangle
-	 */
+
+    function onClick(e:hxd.Event)
+    {
+        @:privateAccess layout.callScript("onClick");
+    }
+    function onRelease(e:hxd.Event, outside:Bool) 
+    {
+        @:privateAccess layout.callScript("onRelease");
+    }
+    function onOver(e:hxd.Event)
+    {
+        @:privateAccess layout.callScript("onOver");
+    }
+    function onOut(e:hxd.Event) 
+    {
+        @:privateAccess layout.callScript("onOut");
+    }
+    function onPush(e:hxd.Event) 
+    {
+        @:privateAccess layout.callScript("onPush");
+    }
+
+/* ==========================  HELPERS  ==================================*/
+/*
+    //
+	// The shape will be scaled to fit the destination sizes keeping its original ratio
+	// The shape will fit AT MAXIMUM the targeted rectangle
+	//
 	public function fitIn( p_width:Float, p_height:Float ):UIComponent
     {
         var bounds = this.getBounds(this.parent);
@@ -105,10 +97,10 @@ class UIComponent extends h2d.Object implements ee.ui.layout.Resizable
         return this;
     }
 
-    /**
-	 * The shape will be scaled to fit the destination sizes keeping its original ratio
-	 * The shape will fit AT MINIMUM the targeted rectangle, meaning the the resulting shape may exeed targeted width or height depending on original ratio
-	 */
+    //
+	// The shape will be scaled to fit the destination sizes keeping its original ratio
+	// The shape will fit AT MINIMUM the targeted rectangle, meaning the the resulting shape may exeed targeted width or height depending on original ratio
+	//
 	public function fitOut( p_width:Float, p_height:Float):UIComponent
     {
         var bounds = this.getBounds(this.parent);
@@ -125,5 +117,5 @@ class UIComponent extends h2d.Object implements ee.ui.layout.Resizable
         }
         return this;
     }
-
+*/
 }
